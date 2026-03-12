@@ -1,0 +1,3 @@
+[workspace]
+members = ["engine_core", "game_runtime"]
+resolver = "2"
