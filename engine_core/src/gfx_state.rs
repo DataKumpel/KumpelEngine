@@ -1,7 +1,10 @@
 //===== IMPORTS =====//
 use std::sync::Arc;
 
+use wgpu::util::DeviceExt;
 use winit::window::Window;
+
+use crate::vertex::Vertex;
 //===== IMPORTS =====//
 
 
@@ -14,9 +17,14 @@ pub struct GfxState {
     pub size: winit::dpi::PhysicalSize<u32>,
     pub window: Arc<Window>,
     pub render_pipeline: wgpu::RenderPipeline,
+    pub vertex_buffer: wgpu::Buffer,
+    pub index_buffer: wgpu::Buffer,
+    pub num_indices: u32,
 }
 
 impl GfxState {
+    
+
     pub async fn new(window: Arc<Window>) -> Self {
         let size = window.inner_size();
         let instance = wgpu::Instance::default();
@@ -53,6 +61,30 @@ impl GfxState {
             desired_maximum_frame_latency: 2,
         };
         surface.configure(&device, &config);
+        
+        // ---> Define Hello World Triangle and indices:
+        const VERTICES: &[Vertex] = &[
+            Vertex { pos: [ 0.0,  0.5, 0.0], color: [1.0, 0.0, 0.0] },
+            Vertex { pos: [-0.5, -0.5, 0.0], color: [0.0, 1.0, 0.0] },
+            Vertex { pos: [ 0.5, -0.5, 0.0], color: [0.0, 0.0, 1.0] },
+        ];
+
+        const INDICES: &[u16] = &[0, 1, 2];
+        
+        // ---> Create Buffers:
+        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Vertex Buffer"),
+            contents: bytemuck::cast_slice(VERTICES),
+            usage: wgpu::BufferUsages::VERTEX,
+        });
+
+        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor{
+            label: Some("Index Buffer"),
+            contents: bytemuck::cast_slice(INDICES),
+            usage: wgpu::BufferUsages::INDEX,
+        });
+
+        let num_indices = INDICES.len() as u32;
 
         // ---> Configure render pipeline:
         let shader = device.create_shader_module(wgpu::include_wgsl!("triangle_shader.wgsl"));
@@ -70,7 +102,7 @@ impl GfxState {
                 module: &shader, 
                 entry_point: "vs_main", 
                 compilation_options: wgpu::PipelineCompilationOptions::default(), 
-                buffers: &[], 
+                buffers: &[Vertex::desc()], 
             }, 
             primitive: wgpu::PrimitiveState { 
                 topology: wgpu::PrimitiveTopology::TriangleList, 
@@ -100,7 +132,7 @@ impl GfxState {
             multiview: None,
         });
 
-        Self { surface, device, queue, config, size, window, render_pipeline }
+        Self { surface, device, queue, config, size, window, render_pipeline, vertex_buffer, index_buffer, num_indices }
     }
 
     pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
@@ -139,7 +171,13 @@ impl GfxState {
             });
 
             render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.draw(0..3, 0..1); // draw 3 vertices, 1 instance
+
+            // ---> Bind Buffers:
+            render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+            render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+
+            // Drawing with indices:
+            render_pass.draw_indexed(0..self.num_indices, 0, 0..1);
         } // End of Render Pass
 
         self.queue.submit(std::iter::once(encoder.finish()));
