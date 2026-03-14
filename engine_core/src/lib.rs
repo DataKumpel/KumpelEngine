@@ -3,3 +3,4 @@ pub mod engine_app;
 pub mod vertex;
 pub mod camera;
 pub mod input;
+pub mod texture;
