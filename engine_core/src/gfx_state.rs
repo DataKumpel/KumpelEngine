@@ -5,26 +5,34 @@ use wgpu::util::DeviceExt;
 use winit::window::Window;
 
 use crate::vertex::Vertex;
+use crate::camera::{Camera, CameraUniform};
 //===== IMPORTS =====//
 
 
 //===== GFX STATE STRUCTURE =====//
 pub struct GfxState {
+    // Gfx base state:
     pub surface: wgpu::Surface<'static>,
     pub device: wgpu::Device,
     pub queue: wgpu::Queue,
     pub config: wgpu::SurfaceConfiguration,
     pub size: winit::dpi::PhysicalSize<u32>,
     pub window: Arc<Window>,
+
+    // Render pipeline state:
     pub render_pipeline: wgpu::RenderPipeline,
     pub vertex_buffer: wgpu::Buffer,
     pub index_buffer: wgpu::Buffer,
     pub num_indices: u32,
+
+    // Camera state:
+    pub camera: Camera,
+    pub camera_uniform: CameraUniform,
+    pub camera_buffer: wgpu::Buffer,
+    pub camera_bind_group: wgpu::BindGroup,
 }
 
 impl GfxState {
-    
-
     pub async fn new(window: Arc<Window>) -> Self {
         let size = window.inner_size();
         let instance = wgpu::Instance::default();
@@ -61,6 +69,53 @@ impl GfxState {
             desired_maximum_frame_latency: 2,
         };
         surface.configure(&device, &config);
+
+        // ---> Initialise Camera:
+        let camera = Camera {
+            eye: glam::Vec3::new(0.0, 1.0, 2.0),
+            target: glam::Vec3::new(0.0, 0.0, 0.0),
+            up: glam::Vec3::Y,
+            aspect: config.width as f32 / config.height as f32,
+            fovy: 45.0f32.to_radians(),
+            clip_near: 0.1,
+            clip_far: 100.0,
+        };
+
+        let mut camera_uniform = CameraUniform::new();
+        camera_uniform.update_view_proj(&camera);
+
+        let camera_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Camera Buffer"),
+            contents: bytemuck::cast_slice(&[camera_uniform]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+
+        let camera_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor { 
+            label: Some("Camera Bind Group Layout"), 
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer { 
+                        ty: wgpu::BufferBindingType::Uniform, 
+                        has_dynamic_offset: false, 
+                        min_binding_size: None, 
+                    },
+                    count: None,
+                },
+            ], 
+        });
+
+        let camera_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor { 
+            label: Some("Camera Bind Group"), 
+            layout: &camera_bind_group_layout, 
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: camera_buffer.as_entire_binding(),
+                },
+            ], 
+        });
         
         // ---> Define Hello World Triangle and indices:
         const VERTICES: &[Vertex] = &[
@@ -90,7 +145,9 @@ impl GfxState {
         let shader = device.create_shader_module(wgpu::include_wgsl!("triangle_shader.wgsl"));
         let render_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor { 
             label: Some("Render Pipeline Layout"), 
-            bind_group_layouts: &[], 
+            bind_group_layouts: &[
+                &camera_bind_group_layout
+            ], 
             push_constant_ranges: &[],
         });
 
@@ -132,7 +189,22 @@ impl GfxState {
             multiview: None,
         });
 
-        Self { surface, device, queue, config, size, window, render_pipeline, vertex_buffer, index_buffer, num_indices }
+        Self { 
+            surface, 
+            device, 
+            queue, 
+            config, 
+            size, 
+            window, 
+            render_pipeline, 
+            vertex_buffer, 
+            index_buffer, 
+            num_indices,
+            camera,
+            camera_bind_group,
+            camera_buffer,
+            camera_uniform,
+        }
     }
 
     pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
@@ -171,6 +243,9 @@ impl GfxState {
             });
 
             render_pass.set_pipeline(&self.render_pipeline);
+
+            // ---> Set bind groups:
+            render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
 
             // ---> Bind Buffers:
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
