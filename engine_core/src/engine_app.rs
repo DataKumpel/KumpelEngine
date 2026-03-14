@@ -1,18 +1,24 @@
 use std::sync::Arc;
 
+
 //===== IMPORTS =====//
-use crate::gfx_state::GfxState;
-use winit::{application::ApplicationHandler, event::WindowEvent, event_loop::EventLoop, window::Window};
+use crate::{gfx_state::GfxState, input::InputState};
+use winit::{application::ApplicationHandler, event::WindowEvent, event_loop::EventLoop, keyboard::{KeyCode, PhysicalKey}, window::Window};
 //===== IMPORTS =====//
+
 
 //===== ENGINE APP STRUCTURE =====//
 pub struct EngineApp {
     gfx_state: Option<GfxState>,
+    input_state: InputState,
 }
 
 impl EngineApp {
     pub fn new() -> Self {
-        Self { gfx_state: None }
+        Self { 
+            gfx_state: None, 
+            input_state: InputState::new(),
+        }
     }
 
     pub fn run(mut self) {
@@ -50,6 +56,8 @@ impl ApplicationHandler for EngineApp {
             }
             WindowEvent::RedrawRequested => {
                 if let Some(state) = &mut self.gfx_state {
+                    state.update(&self.input_state);
+
                     match state.render() {
                         Ok(_) => {}
                         Err(wgpu::SurfaceError::Lost) => state.resize(state.size),
@@ -57,6 +65,12 @@ impl ApplicationHandler for EngineApp {
                         Err(e) => log::error!("Render Error: {:?}", e),
                     }
                 }
+            }
+            WindowEvent::KeyboardInput { event: key_event, .. } => {
+                if key_event.physical_key == PhysicalKey::Code(KeyCode::Escape) {
+                    event_loop.exit();
+                }
+                self.input_state.process_keyboard_event(&key_event);
             }
             _ => (),
         }

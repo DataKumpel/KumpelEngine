@@ -4,8 +4,9 @@ use std::sync::Arc;
 use wgpu::util::DeviceExt;
 use winit::window::Window;
 
+use crate::input::InputState;
 use crate::vertex::Vertex;
-use crate::camera::{Camera, CameraUniform};
+use crate::camera::{Camera, CameraController, CameraUniform};
 //===== IMPORTS =====//
 
 
@@ -30,6 +31,7 @@ pub struct GfxState {
     pub camera_uniform: CameraUniform,
     pub camera_buffer: wgpu::Buffer,
     pub camera_bind_group: wgpu::BindGroup,
+    pub camera_controller: CameraController,
 }
 
 impl GfxState {
@@ -80,6 +82,8 @@ impl GfxState {
             clip_near: 0.1,
             clip_far: 100.0,
         };
+
+        let camera_controller = CameraController::new(0.001);
 
         let mut camera_uniform = CameraUniform::new();
         camera_uniform.update_view_proj(&camera);
@@ -204,7 +208,14 @@ impl GfxState {
             camera_bind_group,
             camera_buffer,
             camera_uniform,
+            camera_controller,
         }
+    }
+
+    pub fn update(&mut self, input: &InputState) {
+        self.camera_controller.update_camera(&mut self.camera, input);
+        self.camera_uniform.update_view_proj(&self.camera);
+        self.queue.write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[self.camera_uniform]));
     }
 
     pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {

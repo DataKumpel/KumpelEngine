@@ -1,5 +1,8 @@
 use bytemuck::{Pod, Zeroable};
 use glam::{Mat4, Vec3};
+use winit::keyboard::KeyCode;
+
+use crate::input::InputState;
 
 
 // ---> Correction matrix for WGPU (z in range 0 to 1), OpenGL (z in range -1 to 1)
@@ -50,3 +53,45 @@ impl CameraUniform {
 }
 //===== CAMERA UNIFORM STRUCTURE =====//
 
+
+//===== CAMERA CONTROLLER STRUCTURE =====//
+pub struct CameraController {
+    speed: f32,
+}
+
+impl CameraController {
+    pub fn new(speed: f32) -> Self {
+        Self { speed }
+    }
+
+    pub fn update_camera(&self, camera: &mut Camera, input: &InputState) {
+        let mut forward = camera.target - camera.eye;
+        forward.y = 0.0;
+        let forward_mag = forward.length();
+        let forward_norm = if forward_mag > 0.0 {
+            forward / forward_mag
+        } else {
+            forward
+        };
+
+        let right = forward_norm.cross(camera.up).normalize();
+
+        if input.is_key_pressed(KeyCode::KeyW) {
+            camera.eye += forward_norm * self.speed;
+            camera.target += forward_norm * self.speed;
+        }
+        if input.is_key_pressed(KeyCode::KeyS) {
+            camera.eye -= forward_norm * self.speed;
+            camera.target -= forward_norm * self.speed;
+        }
+        if input.is_key_pressed(KeyCode::KeyA) {
+            camera.eye -= right * self.speed;
+            camera.target -= right * self.speed;
+        }
+        if input.is_key_pressed(KeyCode::KeyD) {
+            camera.eye += right * self.speed;
+            camera.target += right * self.speed;
+        }
+    }
+}
+//===== CAMERA CONTROLLER STRUCTURE =====//
