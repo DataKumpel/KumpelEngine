@@ -2,7 +2,9 @@ use std::sync::Arc;
 
 
 //===== IMPORTS =====//
-use crate::{gfx_state::GfxState, input::InputState};
+use crate::{components::{InstanceRaw, Transform}, gfx_state::GfxState, input::InputState};
+use glam::{Quat, Vec3};
+use hecs::World;
 use winit::{application::ApplicationHandler, event::WindowEvent, event_loop::EventLoop, keyboard::{KeyCode, PhysicalKey}, window::Window};
 //===== IMPORTS =====//
 
@@ -11,13 +13,25 @@ use winit::{application::ApplicationHandler, event::WindowEvent, event_loop::Eve
 pub struct EngineApp {
     gfx_state: Option<GfxState>,
     input_state: InputState,
+    world: World,
 }
 
 impl EngineApp {
     pub fn new() -> Self {
+        let mut world = World::new();
+
+        // ---> Spawn 100 cubes in a 10x10 grid:
+        for x in 0..10 {
+            for z in 0..10 {
+                let position = Vec3::new(x as f32 * 2.0 - 10.0, 0.0, z as f32 * 2.0 -10.0);
+                world.spawn((Transform::new(position),));
+            }
+        }
+
         Self { 
             gfx_state: None, 
             input_state: InputState::new(),
+            world,
         }
     }
 
@@ -58,7 +72,16 @@ impl ApplicationHandler for EngineApp {
                 if let Some(state) = &mut self.gfx_state {
                     state.update(&self.input_state);
 
-                    match state.render() {
+                    // ---> Collect all transforms and make into matrices:
+                    let mut instances = Vec::new();
+                    for (transform,) in self.world.query_mut::<(&mut Transform,)>() {
+                        transform.rotation *= Quat::from_rotation_y(0.001); // Spinning Cubes!!!
+                        instances.push(InstanceRaw {
+                            model: transform.to_matrix().to_cols_array_2d(),
+                        });
+                    }
+
+                    match state.render(&instances) {
                         Ok(_) => {}
                         Err(wgpu::SurfaceError::Lost) => state.resize(state.size),
                         Err(wgpu::SurfaceError::OutOfMemory) => event_loop.exit(),

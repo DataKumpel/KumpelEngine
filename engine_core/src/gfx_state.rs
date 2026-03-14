@@ -4,7 +4,9 @@ use std::sync::Arc;
 use wgpu::util::DeviceExt;
 use winit::window::Window;
 
+use crate::components::InstanceRaw;
 use crate::input::InputState;
+use crate::mesh::{self, Mesh};
 use crate::vertex::Vertex;
 use crate::camera::{Camera, CameraController, CameraUniform};
 use crate::texture;
@@ -23,9 +25,8 @@ pub struct GfxState {
 
     // Render pipeline state:
     pub render_pipeline: wgpu::RenderPipeline,
-    pub vertex_buffer: wgpu::Buffer,
-    pub index_buffer: wgpu::Buffer,
-    pub num_indices: u32,
+    pub cube_mesh: Mesh,
+    pub instance_buffer: wgpu::Buffer,
 
     // Camera state:
     pub camera: Camera,
@@ -127,52 +128,16 @@ impl GfxState {
                 },
             ], 
         });
-        
-        // ---> Define Hello World Triangle and indices:
-        //const VERTICES: &[Vertex] = &[
-        //    Vertex { pos: [ 0.0,  0.5, 0.0], color: [1.0, 0.0, 0.0] },
-        //    Vertex { pos: [-0.5, -0.5, 0.0], color: [0.0, 1.0, 0.0] },
-        //    Vertex { pos: [ 0.5, -0.5, 0.0], color: [0.0, 0.0, 1.0] },
-        //];
-        //
-        //const INDICES: &[u16] = &[0, 1, 2];
 
-        // ---> Define Hello World Cube vertices and indices:
-        const VERTICES: &[Vertex] = &[
-            Vertex { pos: [-0.5, -0.5,  0.5], color: [1.0, 0.0, 0.0] }, // 0
-            Vertex { pos: [ 0.5, -0.5,  0.5], color: [0.0, 1.0, 0.0] }, // 1
-            Vertex { pos: [ 0.5,  0.5,  0.5], color: [0.0, 0.0, 1.0] }, // 2
-            Vertex { pos: [-0.5,  0.5,  0.5], color: [1.0, 1.0, 0.0] }, // 3
-            Vertex { pos: [-0.5, -0.5, -0.5], color: [1.0, 0.0, 1.0] }, // 4
-            Vertex { pos: [ 0.5, -0.5, -0.5], color: [0.0, 1.0, 1.0] }, // 5
-            Vertex { pos: [ 0.5,  0.5, -0.5], color: [1.0, 1.0, 1.0] }, // 6
-            Vertex { pos: [-0.5,  0.5, -0.5], color: [0.0, 0.0, 0.0] }, // 7
-        ];
-
-        const INDICES: &[u16] = &[
-            0, 1, 2, 2, 3, 0, // front
-            1, 5, 6, 6, 2, 1, // right
-            7, 6, 5, 5, 4, 7, // back
-            4, 0, 3, 3, 7, 4, // left
-            4, 5, 1, 1, 0, 4, // bottom
-            3, 2, 6, 6, 7, 3, // top
-        ];
-        
-        // ---> Create Buffers:
-        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Vertex Buffer"),
-            contents: bytemuck::cast_slice(VERTICES),
-            usage: wgpu::BufferUsages::VERTEX,
+        // ---> Create a Mesh:
+        let cube_mesh = Mesh::new(&device, mesh::CUBE_VERTICES, mesh::CUBE_INDICES);
+        let instance_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Instance Buffer"),
+            size: (std::mem::size_of::<InstanceRaw>() * 10000) as wgpu::BufferAddress,
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
         });
-
-        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor{
-            label: Some("Index Buffer"),
-            contents: bytemuck::cast_slice(INDICES),
-            usage: wgpu::BufferUsages::INDEX,
-        });
-
-        let num_indices = INDICES.len() as u32;
-
+        
         // ---> Configure render pipeline:
         let shader = device.create_shader_module(wgpu::include_wgsl!("triangle_shader.wgsl"));
         let render_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor { 
@@ -191,7 +156,7 @@ impl GfxState {
                 module: &shader, 
                 entry_point: "vs_main", 
                 compilation_options: wgpu::PipelineCompilationOptions::default(), 
-                buffers: &[Vertex::desc()], 
+                buffers: &[Vertex::desc(), InstanceRaw::desc()], 
             }, 
             primitive: wgpu::PrimitiveState { 
                 topology: wgpu::PrimitiveTopology::TriangleList, 
@@ -235,9 +200,8 @@ impl GfxState {
             size, 
             window, 
             render_pipeline, 
-            vertex_buffer, 
-            index_buffer, 
-            num_indices,
+            cube_mesh,
+            instance_buffer,
             camera,
             camera_bind_group,
             camera_buffer,
@@ -264,12 +228,16 @@ impl GfxState {
         }
     }
 
-    pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
+    pub fn render(&mut self, instances: &[InstanceRaw]) -> Result<(), wgpu::SurfaceError> {
         let output = self.surface.get_current_texture()?;
         let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
         let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("Main Render Encoder"),
         });
+
+        // ---> Write instance data to GPU:
+        let instance_data = bytemuck::cast_slice(instances);
+        self.queue.write_buffer(&self.instance_buffer, 0, instance_data);
 
         // ---> Start Render Pass:
         {
@@ -303,11 +271,12 @@ impl GfxState {
             render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
 
             // ---> Bind Buffers:
-            render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-            render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+            render_pass.set_vertex_buffer(0, self.cube_mesh.vertex_buffer.slice(..));
+            render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
+            render_pass.set_index_buffer(self.cube_mesh.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
 
             // Drawing with indices:
-            render_pass.draw_indexed(0..self.num_indices, 0, 0..1);
+            render_pass.draw_indexed(0..self.cube_mesh.num_indices, 0, 0..instances.len() as u32);
         } // End of Render Pass
 
         self.queue.submit(std::iter::once(encoder.finish()));

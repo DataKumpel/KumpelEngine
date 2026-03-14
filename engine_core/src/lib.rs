@@ -4,3 +4,5 @@ pub mod vertex;
 pub mod camera;
 pub mod input;
 pub mod texture;
+pub mod components;
+pub mod mesh;
