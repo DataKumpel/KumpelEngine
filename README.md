@@ -13,7 +13,8 @@ I plan to implement the engine along the following roadmap:
 
 ### Foundation
 
-- [ ] Windowing and input management using `winit`
+- [x] Windowing using `winit`
+- [ ] Input management using `winit`
 - [ ] Implement the game loop
   - [ ] Consume events (mouse, keyboard, window events)
   - [ ] Update game logic with delta time (`dt`)
@@ -21,10 +22,14 @@ I plan to implement the engine along the following roadmap:
 
 ### Renderer (WebGPU)
 
-- [ ] Initialising with `Instance`, `Adapter`, `Device` and `Queue`
+- [x] Initialising with `Instance`, `Adapter`, `Device` and `Queue`
 - [ ] Ressource management (e.g. textures, buffers for indices and vertices, shader)
-- [ ] Render pipelines
-- [ ] Render pass (i.e. drawing frames)
+- [x] Render pipelines
+- [x] Render pass (i.e. drawing frames)
+- [ ] Implement vector maths using `glam`
+- [ ] Implement MVP matrices (model, view, projection)
+- [ ] Create uniform buffers and bind groups
+- [ ] Add depth texture and update pipeline
 
 ### Game World
 
