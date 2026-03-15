@@ -9,7 +9,7 @@ use crate::input::InputState;
 use crate::mesh::{self, Mesh};
 use crate::vertex::Vertex;
 use crate::camera::{Camera, CameraController, CameraUniform};
-use crate::texture;
+use crate::texture::{self, DiffuseTexture};
 //===== IMPORTS =====//
 
 
@@ -37,6 +37,7 @@ pub struct GfxState {
 
     // Textures:
     pub depth_texture: wgpu::TextureView,
+    pub diffuse_texture: DiffuseTexture,
 }
 
 impl GfxState {
@@ -129,6 +130,33 @@ impl GfxState {
             ], 
         });
 
+        // ---> Create Texture:
+        let texture_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor { 
+            label: Some("Texture Bind Group Layout"), 
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture { 
+                        sample_type: wgpu::TextureSampleType::Float { filterable: true }, 
+                        view_dimension: wgpu::TextureViewDimension::D2, 
+                        multisampled: false, 
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                    count: None,
+                },
+            ], 
+        });
+        let diffuse_bytes = include_bytes!("../../sample_texture.png");
+        let diffuse_texture = texture::DiffuseTexture::from_bytes(
+            &device, &queue, diffuse_bytes, "Sample Texture", &texture_bind_group_layout,
+        );
+
         // ---> Create a Mesh:
         let cube_mesh = Mesh::new(&device, mesh::CUBE_VERTICES, mesh::CUBE_INDICES);
         let instance_buffer = device.create_buffer(&wgpu::BufferDescriptor {
@@ -143,7 +171,8 @@ impl GfxState {
         let render_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor { 
             label: Some("Render Pipeline Layout"), 
             bind_group_layouts: &[
-                &camera_bind_group_layout
+                &camera_bind_group_layout,
+                &texture_bind_group_layout,
             ], 
             push_constant_ranges: &[],
         });
@@ -208,6 +237,7 @@ impl GfxState {
             camera_uniform,
             camera_controller,
             depth_texture,
+            diffuse_texture,
         }
     }
 
