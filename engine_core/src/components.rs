@@ -1,6 +1,8 @@
 use bytemuck::{Pod, Zeroable};
 use glam::{Mat4, Quat, Vec3};
 
+use crate::assets::TextureHandle;
+
 
 //===== TRANSFORM STRUCTURE =====//
 pub struct Transform {
@@ -47,3 +49,11 @@ impl InstanceRaw {
     }
 }
 //===== INSTANCE RAW STRUCTURE =====//
+
+
+//===== MATERIAL STRUCTURE =====//
+pub struct Material {
+    pub diffuse_texture: TextureHandle
+}
+//===== MATERIAL STRUCTURE =====//
+

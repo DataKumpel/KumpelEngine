@@ -1,15 +1,17 @@
+use std::collections::HashMap;
 //===== IMPORTS =====//
 use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 use winit::window::Window;
 
+use crate::assets::{AssetManager, TextureHandle};
 use crate::components::InstanceRaw;
 use crate::input::InputState;
 use crate::mesh::{self, Mesh};
 use crate::vertex::Vertex;
 use crate::camera::{Camera, CameraController, CameraUniform};
-use crate::texture::{self, DiffuseTexture};
+use crate::texture;
 //===== IMPORTS =====//
 
 
@@ -37,7 +39,7 @@ pub struct GfxState {
 
     // Textures:
     pub depth_texture: wgpu::TextureView,
-    pub diffuse_texture: DiffuseTexture,
+    pub texture_bind_group_layout: wgpu::BindGroupLayout,
 }
 
 impl GfxState {
@@ -152,10 +154,6 @@ impl GfxState {
                 },
             ], 
         });
-        let diffuse_bytes = include_bytes!("../../sample_texture.png");
-        let diffuse_texture = texture::DiffuseTexture::from_bytes(
-            &device, &queue, diffuse_bytes, "Sample Texture", &texture_bind_group_layout,
-        );
 
         // ---> Create a Mesh:
         let cube_mesh = Mesh::new(&device, mesh::CUBE_VERTICES, mesh::CUBE_INDICES);
@@ -237,7 +235,7 @@ impl GfxState {
             camera_uniform,
             camera_controller,
             depth_texture,
-            diffuse_texture,
+            texture_bind_group_layout,
         }
     }
 
@@ -258,16 +256,31 @@ impl GfxState {
         }
     }
 
-    pub fn render(&mut self, instances: &[InstanceRaw]) -> Result<(), wgpu::SurfaceError> {
+    pub fn render(
+        &mut self, 
+        asset_manager: &AssetManager, 
+        batches: &HashMap<TextureHandle, Vec<InstanceRaw>>,
+    ) -> Result<(), wgpu::SurfaceError> {
+        
         let output = self.surface.get_current_texture()?;
         let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
+        
+        // ---> Collect all instances and write to ONE buffer:
+        let mut all_instances = Vec::new();
+        let mut render_commands = Vec::new();
+
+        for (handle, instances) in batches {
+            let start_idx = all_instances.len() as u32;
+            all_instances.extend_from_slice(instances);
+            let end_idx = all_instances.len() as u32;
+            render_commands.push((*handle, start_idx..end_idx));
+        }
+
+        self.queue.write_buffer(&self.instance_buffer, 0, bytemuck::cast_slice(&all_instances));
+
         let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("Main Render Encoder"),
         });
-
-        // ---> Write instance data to GPU:
-        let instance_data = bytemuck::cast_slice(instances);
-        self.queue.write_buffer(&self.instance_buffer, 0, instance_data);
 
         // ---> Start Render Pass:
         {
@@ -299,15 +312,19 @@ impl GfxState {
 
             // ---> Set bind groups:
             render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
-            render_pass.set_bind_group(1, &self.diffuse_texture.bind_group, &[]);
 
             // ---> Bind Buffers:
             render_pass.set_vertex_buffer(0, self.cube_mesh.vertex_buffer.slice(..));
             render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
             render_pass.set_index_buffer(self.cube_mesh.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
 
-            // Drawing with indices:
-            render_pass.draw_indexed(0..self.cube_mesh.num_indices, 0, 0..instances.len() as u32);
+            // ---> Draw batched objects:
+            for (handle, instance_range) in render_commands {
+                if let Some(texture) = asset_manager.get_texture(handle) {
+                    render_pass.set_bind_group(1, &texture.bind_group, &[]);
+                    render_pass.draw_indexed(0..self.cube_mesh.num_indices, 0, instance_range);
+                }
+            }
         } // End of Render Pass
 
         self.queue.submit(std::iter::once(encoder.finish()));

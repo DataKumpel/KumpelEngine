@@ -1,8 +1,8 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 
 //===== IMPORTS =====//
-use crate::{components::{InstanceRaw, Transform}, gfx_state::GfxState, input::InputState};
+use crate::{assets::{AssetManager, TextureHandle}, components::{InstanceRaw, Material, Transform}, gfx_state::GfxState, input::InputState};
 use glam::{Quat, Vec3};
 use hecs::World;
 use winit::{application::ApplicationHandler, event::WindowEvent, event_loop::EventLoop, keyboard::{KeyCode, PhysicalKey}, window::Window};
@@ -14,24 +14,16 @@ pub struct EngineApp {
     gfx_state: Option<GfxState>,
     input_state: InputState,
     world: World,
+    asset_manager: AssetManager,
 }
 
 impl EngineApp {
     pub fn new() -> Self {
-        let mut world = World::new();
-
-        // ---> Spawn 100 cubes in a 10x10 grid:
-        for x in 0..10 {
-            for z in 0..10 {
-                let position = Vec3::new(x as f32 * 2.0 - 10.0, 0.0, z as f32 * 2.0 -10.0);
-                world.spawn((Transform::new(position),));
-            }
-        }
-
         Self { 
             gfx_state: None, 
             input_state: InputState::new(),
-            world,
+            world: World::new(),
+            asset_manager: AssetManager::new(),
         }
     }
 
@@ -49,8 +41,32 @@ impl ApplicationHandler for EngineApp {
             let window_attibs = Window::default_attributes().with_title("Kumpel Engine v0.0.1");
             let window = Arc::new(event_loop.create_window(window_attibs).unwrap());
 
-            // Block on initialising WebGPU because new is async:
+            // ---> Block on initialising WebGPU because new is async:
             let state = pollster::block_on(GfxState::new(window));
+
+            // ---> Load Texture via Asset Manager:
+            let diffuse_bytes = include_bytes!("../../sample_texture.png");
+            let texture = crate::texture::DiffuseTexture::from_bytes(
+                &state.device,
+                &state.queue,
+                diffuse_bytes,
+                "test_texture",
+                &state.texture_bind_group_layout,
+            );
+            let handle = self.asset_manager.add_texture(texture);
+
+            // ---> Spawn 100 cubes in a 10x10 grid:
+            for x in 0..10 {
+                for z in 0..10 {
+                    let position = Vec3::new(x as f32 * 2.0 - 10.0, 0.0, z as f32 * 2.0 -10.0);
+                    self.world.spawn((
+                        Transform::new(position),
+                        Material { diffuse_texture: handle }
+                    ));
+                }
+            }
+
+
             self.gfx_state = Some(state);
         }
     }
@@ -72,16 +88,20 @@ impl ApplicationHandler for EngineApp {
                 if let Some(state) = &mut self.gfx_state {
                     state.update(&self.input_state);
 
+                    // ---> Group instances by material handle:
+                    let mut batches: HashMap<TextureHandle, Vec<InstanceRaw>> = HashMap::new();
+
                     // ---> Collect all transforms and make into matrices:
-                    let mut instances = Vec::new();
-                    for (transform,) in self.world.query_mut::<(&mut Transform,)>() {
+                    for (transform, material) in self.world.query_mut::<(&mut Transform, &Material)>() {
                         transform.rotation *= Quat::from_rotation_y(0.001); // Spinning Cubes!!!
-                        instances.push(InstanceRaw {
+                        let instance = InstanceRaw {
                             model: transform.to_matrix().to_cols_array_2d(),
-                        });
+                        };
+
+                        batches.entry(material.diffuse_texture).or_default().push(instance);
                     }
 
-                    match state.render(&instances) {
+                    match state.render(&self.asset_manager, &batches) {
                         Ok(_) => {}
                         Err(wgpu::SurfaceError::Lost) => state.resize(state.size),
                         Err(wgpu::SurfaceError::OutOfMemory) => event_loop.exit(),
