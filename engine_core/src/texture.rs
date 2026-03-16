@@ -51,7 +51,7 @@ impl DiffuseTexture {
         layout: &wgpu::BindGroupLayout,
     ) -> Self {
         let img = image::load_from_memory(bytes).unwrap();
-        let rgba = img.to_rgb8();
+        let rgba = img.to_rgba8();
         let dimensions = img.dimensions();
 
         let size = wgpu::Extent3d {

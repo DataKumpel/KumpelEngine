@@ -299,6 +299,7 @@ impl GfxState {
 
             // ---> Set bind groups:
             render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
+            render_pass.set_bind_group(1, &self.diffuse_texture.bind_group, &[]);
 
             // ---> Bind Buffers:
             render_pass.set_vertex_buffer(0, self.cube_mesh.vertex_buffer.slice(..));
