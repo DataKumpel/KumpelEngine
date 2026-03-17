@@ -1,11 +1,37 @@
-use std::{collections::HashMap, sync::Arc};
-
+use std::{
+    collections::HashMap, 
+    sync::Arc,
+};
 
 //===== IMPORTS =====//
-use crate::{assets::{AssetManager, TextureHandle}, components::{InstanceRaw, Material, Transform}, gfx_state::GfxState, input::InputState};
-use glam::{Quat, Vec3};
+use crate::{
+    assets::{
+        AssetManager, 
+        TextureHandle,
+    }, 
+    components::{
+        InstanceRaw, 
+        Material, 
+        Transform,
+    }, 
+    gfx_state::GfxState, 
+    input::InputState,
+};
+use glam::{
+    Quat, 
+    Vec3,
+};
 use hecs::World;
-use winit::{application::ApplicationHandler, event::WindowEvent, event_loop::EventLoop, keyboard::{KeyCode, PhysicalKey}, window::Window};
+use winit::{
+    application::ApplicationHandler, 
+    event::WindowEvent, 
+    event_loop::EventLoop, 
+    keyboard::{
+        KeyCode, 
+        PhysicalKey,
+    }, 
+    window::Window,
+};
 //===== IMPORTS =====//
 
 
@@ -45,15 +71,39 @@ impl ApplicationHandler for EngineApp {
             let state = pollster::block_on(GfxState::new(window));
 
             // ---> Load Texture via Asset Manager:
-            let diffuse_bytes = include_bytes!("../../sample_texture.png");
-            let texture = crate::texture::DiffuseTexture::from_bytes(
-                &state.device,
-                &state.queue,
-                diffuse_bytes,
-                "test_texture",
+            //let diffuse_bytes = include_bytes!("../../sample_texture.png");
+            //let texture = crate::texture::DiffuseTexture::from_memory(
+            //    &state.device,
+            //    &state.queue,
+            //    diffuse_bytes,
+            //    "test_texture",
+            //    &state.texture_bind_group_layout,
+            //).unwrap();
+            let texture = crate::texture::DiffuseTexture::from_path(
+                &state.device, 
+                &state.queue, 
+                "./sample_texture.png", 
+                "test_texture", 
                 &state.texture_bind_group_layout,
-            );
+            ).expect("Couldn't load texture from disk!");
             let handle = self.asset_manager.add_texture(texture);
+
+            //let diffuse_bytes_2 = include_bytes!("../../sample_texture2.png");
+            //let texture2 = crate::texture::DiffuseTexture::from_memory(
+            //    &state.device, 
+            //    &state.queue, 
+            //    diffuse_bytes_2, 
+            //    "test_texture_2", 
+            //    &state.texture_bind_group_layout,
+            //).unwrap();
+            let texture2 = crate::texture::DiffuseTexture::from_path(
+                &state.device, 
+                &state.queue, 
+                "./sample_texture2.png", 
+                "test_texture", 
+                &state.texture_bind_group_layout,
+            ).expect("Couldn't load texture from disk!");
+            let handle2 = self.asset_manager.add_texture(texture2);
 
             // ---> Spawn 100 cubes in a 10x10 grid:
             for x in 0..10 {
@@ -61,11 +111,16 @@ impl ApplicationHandler for EngineApp {
                     let position = Vec3::new(x as f32 * 2.0 - 10.0, 0.0, z as f32 * 2.0 -10.0);
                     self.world.spawn((
                         Transform::new(position),
-                        Material { diffuse_texture: handle }
+                        Material { 
+                            diffuse_texture: if (x * 10 + z) % 2 == 0 {
+                                handle
+                            } else {
+                                handle2
+                            }
+                        }
                     ));
                 }
             }
-
 
             self.gfx_state = Some(state);
         }

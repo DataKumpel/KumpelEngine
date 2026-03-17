@@ -1,5 +1,4 @@
-use image::GenericImageView;
-
+use image::{DynamicImage, GenericImageView};
 
 
 pub const DEPTH_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Depth32Float;
@@ -43,17 +42,39 @@ pub struct DiffuseTexture {
 }
 
 impl DiffuseTexture {
-    pub fn from_bytes(
+    pub fn from_path(
+        device: &wgpu::Device, 
+        queue: &wgpu::Queue, 
+        path: &str, 
+        label: &str, 
+        layout: &wgpu::BindGroupLayout,
+    ) -> Result<Self, image::ImageError> {
+        let img = image::open(path)?;
+        Ok(Self::from_bytes(img, device, queue, label, layout))
+    }
+
+
+    pub fn from_memory(
         device: &wgpu::Device, 
         queue: &wgpu::Queue, 
         bytes: &[u8], 
         label: &str, 
         layout: &wgpu::BindGroupLayout,
+    ) -> Result<Self, image::ImageError> {
+        let img = image::load_from_memory(bytes)?;
+        Ok(DiffuseTexture::from_bytes(img, device, queue, label, layout))
+    }
+
+    fn from_bytes(
+        img: DynamicImage, 
+        device: &wgpu::Device, 
+        queue: &wgpu::Queue, 
+        label: &str, 
+        layout: &wgpu::BindGroupLayout,
     ) -> Self {
-        let img = image::load_from_memory(bytes).unwrap();
+        
         let rgba = img.to_rgba8();
         let dimensions = img.dimensions();
-
         let size = wgpu::Extent3d {
             width: dimensions.0,
             height: dimensions.1,
@@ -118,6 +139,7 @@ impl DiffuseTexture {
         });
 
         Self { texture, view, sampler, bind_group }
+
     }
 }
 //===== DIFFUSE TEXTURE STRUCTURE =====//
