@@ -7,3 +7,4 @@ pub mod texture;
 pub mod components;
 pub mod mesh;
 pub mod assets;
+pub mod light;
