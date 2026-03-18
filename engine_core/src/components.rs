@@ -57,3 +57,17 @@ pub struct Material {
 }
 //===== MATERIAL STRUCTURE =====//
 
+
+//===== POINT LIGHT STRUCTURE =====//
+pub struct PointLight {
+    pub color: glam::Vec3,
+}
+
+impl PointLight {
+    pub fn new(color: glam::Vec3) -> Self {
+        Self { color }
+    }
+}
+//===== POINT LIGHT STRUCTURE =====//
+
+

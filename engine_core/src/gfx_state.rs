@@ -44,6 +44,7 @@ pub struct GfxState {
 
     // Lights:
     pub light_bind_group: wgpu::BindGroup,
+    pub light_buffer: wgpu::Buffer,
 }
 
 impl GfxState {
@@ -278,6 +279,7 @@ impl GfxState {
             depth_texture,
             texture_bind_group_layout,
             light_bind_group,
+            light_buffer,
         }
     }
 
@@ -285,6 +287,11 @@ impl GfxState {
         self.camera_controller.update_camera(&mut self.camera, input);
         self.camera_uniform.update_view_proj(&self.camera);
         self.queue.write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[self.camera_uniform]));
+    }
+
+    pub fn update_light(&mut self, position: glam::Vec3, color: glam::Vec3) {
+        let light_uniform = LightUniform::new(position.into(), color.into());
+        self.queue.write_buffer(&self.light_buffer, 0, bytemuck::cast_slice(&[light_uniform]));
     }
 
     pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
