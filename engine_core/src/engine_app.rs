@@ -1,6 +1,7 @@
 use std::{
     collections::HashMap, 
     sync::Arc,
+    time::Instant,
 };
 
 //===== IMPORTS =====//
@@ -13,6 +14,7 @@ use crate::{
         InstanceRaw, 
         Material, 
         Transform,
+        PointLight,
     }, 
     gfx_state::GfxState, 
     input::InputState,
@@ -41,6 +43,7 @@ pub struct EngineApp {
     input_state: InputState,
     world: World,
     asset_manager: AssetManager,
+    start_time: Instant,
 }
 
 impl EngineApp {
@@ -50,6 +53,7 @@ impl EngineApp {
             input_state: InputState::new(),
             world: World::new(),
             asset_manager: AssetManager::new(),
+            start_time: Instant::now(),
         }
     }
 
@@ -122,6 +126,12 @@ impl ApplicationHandler for EngineApp {
                 }
             }
 
+            // ---> Spawn a point-light:
+            self.world.spawn((
+                Transform::new(glam::Vec3::new(0.0, 5.0, 0.0)),
+                PointLight::new(glam::Vec3::new(1.0, 1.0, 1.0)),
+            ));
+
             self.gfx_state = Some(state);
         }
     }
@@ -142,6 +152,22 @@ impl ApplicationHandler for EngineApp {
             WindowEvent::RedrawRequested => {
                 if let Some(state) = &mut self.gfx_state {
                     state.update(&self.input_state);
+
+                    let elapsed_time = self.start_time.elapsed().as_secs_f32();
+
+                    // ---> Light System:
+                    let mut light_pos = glam::Vec3::ZERO;
+                    let mut light_color = glam::Vec3::ONE;
+
+                    for (transform, light) in self.world.query_mut::<(&mut Transform, &PointLight)>() {
+                        transform.position.x = elapsed_time.cos() * 10.0;
+                        transform.position.z = elapsed_time.sin() * 10.0;
+                        transform.position.y = 5.0 + (elapsed_time * 2.0).sin() * 2.0;
+
+                        light_pos = transform.position;
+                        light_color = light.color;
+                    }
+                    state.update_light(light_pos, light_color);
 
                     // ---> Group instances by material handle:
                     let mut batches: HashMap<TextureHandle, Vec<InstanceRaw>> = HashMap::new();

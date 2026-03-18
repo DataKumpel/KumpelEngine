@@ -88,7 +88,7 @@ impl GfxState {
         // ---> Create depth texture:
         let depth_texture = texture::create_depth_texture(&device, &config, "Depth Texture");
 
-        // ---> Create light (Directional light):
+        // ---> Create light:
         let light_uniform = LightUniform::new([2.0, 10.0, 2.0], [1.0, 1.0, 1.0]);
 
         let light_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor{
