@@ -7,6 +7,7 @@ use bytemuck::{Pod, Zeroable};
 pub struct Vertex {
     pub pos: [f32; 3],
     pub tex_coords: [f32; 2], // UV-coordinates...
+    pub normal: [f32; 3],
 }
 
 impl Vertex {
@@ -25,6 +26,11 @@ impl Vertex {
                     shader_location: 1,  // @location(1) in wgsl shader
                     format: wgpu::VertexFormat::Float32x2,
                 },
+                wgpu::VertexAttribute {
+                    offset: 20,
+                    shader_location: 2,  // @location(2) in wgsl shader
+                    format: wgpu::VertexFormat::Float32x3,
+                }
             ],
         }
     }

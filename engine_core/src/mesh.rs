@@ -44,40 +44,40 @@ use crate::vertex::Vertex;
 //===== TEXTURED CUBE =====//
 pub const CUBE_VERTICES: &[Vertex] = &[
     // Front:
-    Vertex { pos: [-0.5, -0.5,  0.5], tex_coords: [0.0, 1.0] }, // 0
-    Vertex { pos: [ 0.5, -0.5,  0.5], tex_coords: [1.0, 1.0] }, // 1
-    Vertex { pos: [ 0.5,  0.5,  0.5], tex_coords: [1.0, 0.0] }, // 2
-    Vertex { pos: [-0.5,  0.5,  0.5], tex_coords: [0.0, 0.0] }, // 3
+    Vertex { pos: [-0.5, -0.5,  0.5], tex_coords: [0.0, 1.0], normal: [ 0.0,  0.0,  1.0] }, // 0
+    Vertex { pos: [ 0.5, -0.5,  0.5], tex_coords: [1.0, 1.0], normal: [ 0.0,  0.0,  1.0] }, // 1
+    Vertex { pos: [ 0.5,  0.5,  0.5], tex_coords: [1.0, 0.0], normal: [ 0.0,  0.0,  1.0] }, // 2
+    Vertex { pos: [-0.5,  0.5,  0.5], tex_coords: [0.0, 0.0], normal: [ 0.0,  0.0,  1.0] }, // 3
     
     // Back:
-    Vertex { pos: [-0.5,  0.5, -0.5], tex_coords: [1.0, 0.0] }, // 4
-    Vertex { pos: [ 0.5,  0.5, -0.5], tex_coords: [0.0, 0.0] }, // 5
-    Vertex { pos: [ 0.5, -0.5, -0.5], tex_coords: [0.0, 1.0] }, // 6
-    Vertex { pos: [-0.5, -0.5, -0.5], tex_coords: [1.0, 1.0] }, // 7
+    Vertex { pos: [-0.5,  0.5, -0.5], tex_coords: [1.0, 0.0], normal: [ 0.0,  0.0, -1.0] }, // 4
+    Vertex { pos: [ 0.5,  0.5, -0.5], tex_coords: [0.0, 0.0], normal: [ 0.0,  0.0, -1.0] }, // 5
+    Vertex { pos: [ 0.5, -0.5, -0.5], tex_coords: [0.0, 1.0], normal: [ 0.0,  0.0, -1.0] }, // 6
+    Vertex { pos: [-0.5, -0.5, -0.5], tex_coords: [1.0, 1.0], normal: [ 0.0,  0.0, -1.0] }, // 7
     
     // Right:
-    Vertex { pos: [ 0.5, -0.5, -0.5], tex_coords: [1.0, 1.0] }, // 8
-    Vertex { pos: [ 0.5,  0.5, -0.5], tex_coords: [1.0, 0.0] }, // 9
-    Vertex { pos: [ 0.5,  0.5,  0.5], tex_coords: [0.0, 0.0] }, // 10
-    Vertex { pos: [ 0.5, -0.5,  0.5], tex_coords: [0.0, 1.0] }, // 11
+    Vertex { pos: [ 0.5, -0.5, -0.5], tex_coords: [1.0, 1.0], normal: [ 1.0,  0.0,  0.0] }, // 8
+    Vertex { pos: [ 0.5,  0.5, -0.5], tex_coords: [1.0, 0.0], normal: [ 1.0,  0.0,  0.0] }, // 9
+    Vertex { pos: [ 0.5,  0.5,  0.5], tex_coords: [0.0, 0.0], normal: [ 1.0,  0.0,  0.0] }, // 10
+    Vertex { pos: [ 0.5, -0.5,  0.5], tex_coords: [0.0, 1.0], normal: [ 1.0,  0.0,  0.0] }, // 11
     
     // Left:
-    Vertex { pos: [-0.5, -0.5,  0.5], tex_coords: [1.0, 1.0] }, // 12
-    Vertex { pos: [-0.5,  0.5,  0.5], tex_coords: [1.0, 0.0] }, // 13
-    Vertex { pos: [-0.5,  0.5, -0.5], tex_coords: [0.0, 0.0] }, // 14
-    Vertex { pos: [-0.5, -0.5, -0.5], tex_coords: [0.0, 1.0] }, // 15
+    Vertex { pos: [-0.5, -0.5,  0.5], tex_coords: [1.0, 1.0], normal: [-1.0,  0.0,  0.0] }, // 12
+    Vertex { pos: [-0.5,  0.5,  0.5], tex_coords: [1.0, 0.0], normal: [-1.0,  0.0,  0.0] }, // 13
+    Vertex { pos: [-0.5,  0.5, -0.5], tex_coords: [0.0, 0.0], normal: [-1.0,  0.0,  0.0] }, // 14
+    Vertex { pos: [-0.5, -0.5, -0.5], tex_coords: [0.0, 1.0], normal: [-1.0,  0.0,  0.0] }, // 15
     
     // Top:
-    Vertex { pos: [ 0.5,  0.5, -0.5], tex_coords: [1.0, 0.0] }, // 16
-    Vertex { pos: [-0.5,  0.5, -0.5], tex_coords: [0.0, 0.0] }, // 17
-    Vertex { pos: [-0.5,  0.5,  0.5], tex_coords: [0.0, 1.0] }, // 18
-    Vertex { pos: [ 0.5,  0.5,  0.5], tex_coords: [1.0, 1.0] }, // 19
+    Vertex { pos: [ 0.5,  0.5, -0.5], tex_coords: [1.0, 0.0], normal: [ 0.0,  1.0,  0.0] }, // 16
+    Vertex { pos: [-0.5,  0.5, -0.5], tex_coords: [0.0, 0.0], normal: [ 0.0,  1.0,  0.0] }, // 17
+    Vertex { pos: [-0.5,  0.5,  0.5], tex_coords: [0.0, 1.0], normal: [ 0.0,  1.0,  0.0] }, // 18
+    Vertex { pos: [ 0.5,  0.5,  0.5], tex_coords: [1.0, 1.0], normal: [ 0.0,  1.0,  0.0] }, // 19
     
     // Bottom:
-    Vertex { pos: [ 0.5, -0.5,  0.5], tex_coords: [1.0, 0.0] }, // 20
-    Vertex { pos: [-0.5, -0.5,  0.5], tex_coords: [0.0, 0.0] }, // 21
-    Vertex { pos: [-0.5, -0.5, -0.5], tex_coords: [0.0, 1.0] }, // 22
-    Vertex { pos: [ 0.5, -0.5, -0.5], tex_coords: [1.0, 1.0] }, // 23
+    Vertex { pos: [ 0.5, -0.5,  0.5], tex_coords: [1.0, 0.0], normal: [ 0.0, -1.0,  0.0] }, // 20
+    Vertex { pos: [-0.5, -0.5,  0.5], tex_coords: [0.0, 0.0], normal: [ 0.0, -1.0,  0.0] }, // 21
+    Vertex { pos: [-0.5, -0.5, -0.5], tex_coords: [0.0, 1.0], normal: [ 0.0, -1.0,  0.0] }, // 22
+    Vertex { pos: [ 0.5, -0.5, -0.5], tex_coords: [1.0, 1.0], normal: [ 0.0, -1.0,  0.0] }, // 23
 ];
 
 pub const CUBE_INDICES: &[u16] = &[
