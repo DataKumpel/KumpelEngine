@@ -12,6 +12,7 @@ use crate::mesh::{self, Mesh};
 use crate::vertex::Vertex;
 use crate::camera::{Camera, CameraController, CameraUniform};
 use crate::texture;
+use crate::light::LightUniform;
 //===== IMPORTS =====//
 
 
@@ -40,6 +41,9 @@ pub struct GfxState {
     // Textures:
     pub depth_texture: wgpu::TextureView,
     pub texture_bind_group_layout: wgpu::BindGroupLayout,
+
+    // Lights:
+    pub light_bind_group: wgpu::BindGroup,
 }
 
 impl GfxState {
@@ -82,6 +86,42 @@ impl GfxState {
 
         // ---> Create depth texture:
         let depth_texture = texture::create_depth_texture(&device, &config, "Depth Texture");
+
+        // ---> Create light (Directional light):
+        let light_uniform = LightUniform::new([2.0, 10.0, 2.0], [1.0, 1.0, 1.0]);
+
+        let light_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor{
+            label: Some("Light Buffer"),
+            contents: bytemuck::cast_slice(&[light_uniform]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+
+        let light_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor { 
+            label: Some("Light Bind Group Layout"), 
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer { 
+                        ty: wgpu::BufferBindingType::Uniform, 
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+            ],
+        });
+
+        let light_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor { 
+            label: Some("Light Bind Group"), 
+            layout: &light_bind_group_layout, 
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: light_buffer.as_entire_binding(),
+                },
+            ],
+        });
 
         // ---> Initialise Camera:
         let camera = Camera {
@@ -171,6 +211,7 @@ impl GfxState {
             bind_group_layouts: &[
                 &camera_bind_group_layout,
                 &texture_bind_group_layout,
+                &light_bind_group_layout,
             ], 
             push_constant_ranges: &[],
         });
@@ -236,6 +277,7 @@ impl GfxState {
             camera_controller,
             depth_texture,
             texture_bind_group_layout,
+            light_bind_group,
         }
     }
 
@@ -291,7 +333,7 @@ impl GfxState {
                         view: &view,
                         resolve_target: None,
                         ops: wgpu::Operations {
-                            load: wgpu::LoadOp::Clear(wgpu::Color { r: 0.1, g: 0.2, b: 0.8, a: 1.0 }), // Background color...
+                            load: wgpu::LoadOp::Clear(wgpu::Color { r: 0.01, g: 0.01, b: 0.02, a: 1.0 }), // Background color...
                             store: wgpu::StoreOp::Store,
                         },
                     }),
@@ -312,6 +354,7 @@ impl GfxState {
 
             // ---> Set bind groups:
             render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
+            render_pass.set_bind_group(2, &self.light_bind_group, &[]);
 
             // ---> Bind Buffers:
             render_pass.set_vertex_buffer(0, self.cube_mesh.vertex_buffer.slice(..));
