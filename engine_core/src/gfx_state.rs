@@ -135,7 +135,7 @@ impl GfxState {
             clip_far: 100.0,
         };
 
-        let camera_controller = CameraController::new(0.001);
+        let camera_controller = CameraController::new(5.0);
 
         let mut camera_uniform = CameraUniform::new();
         camera_uniform.update_view_proj(&camera);
@@ -283,8 +283,8 @@ impl GfxState {
         }
     }
 
-    pub fn update(&mut self, input: &InputState) {
-        self.camera_controller.update_camera(&mut self.camera, input);
+    pub fn update(&mut self, input: &InputState, dt: f32) {
+        self.camera_controller.update_camera(&mut self.camera, input, dt);
         self.camera_uniform.update_view_proj(&self.camera);
         self.queue.write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[self.camera_uniform]));
     }

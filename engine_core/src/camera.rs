@@ -64,7 +64,8 @@ impl CameraController {
         Self { speed }
     }
 
-    pub fn update_camera(&self, camera: &mut Camera, input: &InputState) {
+    pub fn update_camera(&self, camera: &mut Camera, input: &InputState, dt: f32) {
+        // ---> Calculate forward_norm and right vector:
         let mut forward = camera.target - camera.eye;
         forward.y = 0.0;
         let forward_mag = forward.length();
@@ -73,24 +74,27 @@ impl CameraController {
         } else {
             forward
         };
-
         let right = forward_norm.cross(camera.up).normalize();
+        
+        // ---> Calculate velocity:
+        let velocity = self.speed * dt;
 
+        // ---> Handle inputs:
         if input.is_key_pressed(KeyCode::KeyW) {
-            camera.eye += forward_norm * self.speed;
-            camera.target += forward_norm * self.speed;
+            camera.eye += forward_norm * velocity;
+            camera.target += forward_norm * velocity;
         }
         if input.is_key_pressed(KeyCode::KeyS) {
-            camera.eye -= forward_norm * self.speed;
-            camera.target -= forward_norm * self.speed;
+            camera.eye -= forward_norm * velocity;
+            camera.target -= forward_norm * velocity;
         }
         if input.is_key_pressed(KeyCode::KeyA) {
-            camera.eye -= right * self.speed;
-            camera.target -= right * self.speed;
+            camera.eye -= right * velocity;
+            camera.target -= right * velocity;
         }
         if input.is_key_pressed(KeyCode::KeyD) {
-            camera.eye += right * self.speed;
-            camera.target += right * self.speed;
+            camera.eye += right * velocity;
+            camera.target += right * velocity;
         }
     }
 }
