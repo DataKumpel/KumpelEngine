@@ -11,16 +11,12 @@ use crate::{
         TextureHandle,
     }, 
     components::{
-        InstanceRaw, 
-        Material, 
-        Transform,
-        PointLight,
+        InstanceRaw, Material, PointLight, Transform
     }, 
     gfx_state::GfxState, 
-    input::InputState,
+    input::InputState, systems::{animate_light_system, rotate_cubes_system},
 };
 use glam::{
-    Quat, 
     Vec3,
 };
 use hecs::World;
@@ -44,16 +40,20 @@ pub struct EngineApp {
     world: World,
     asset_manager: AssetManager,
     start_time: Instant,
+    last_frame_time: Instant,
 }
 
 impl EngineApp {
     pub fn new() -> Self {
+        let now = Instant::now();
+
         Self { 
             gfx_state: None, 
             input_state: InputState::new(),
             world: World::new(),
             asset_manager: AssetManager::new(),
-            start_time: Instant::now(),
+            start_time: now,
+            last_frame_time: now,
         }
     }
 
@@ -75,14 +75,6 @@ impl ApplicationHandler for EngineApp {
             let state = pollster::block_on(GfxState::new(window));
 
             // ---> Load Texture via Asset Manager:
-            //let diffuse_bytes = include_bytes!("../../sample_texture.png");
-            //let texture = crate::texture::DiffuseTexture::from_memory(
-            //    &state.device,
-            //    &state.queue,
-            //    diffuse_bytes,
-            //    "test_texture",
-            //    &state.texture_bind_group_layout,
-            //).unwrap();
             let texture = crate::texture::DiffuseTexture::from_path(
                 &state.device, 
                 &state.queue, 
@@ -92,14 +84,6 @@ impl ApplicationHandler for EngineApp {
             ).expect("Couldn't load texture from disk!");
             let handle = self.asset_manager.add_texture(texture);
 
-            //let diffuse_bytes_2 = include_bytes!("../../sample_texture2.png");
-            //let texture2 = crate::texture::DiffuseTexture::from_memory(
-            //    &state.device, 
-            //    &state.queue, 
-            //    diffuse_bytes_2, 
-            //    "test_texture_2", 
-            //    &state.texture_bind_group_layout,
-            //).unwrap();
             let texture2 = crate::texture::DiffuseTexture::from_path(
                 &state.device, 
                 &state.queue, 
@@ -150,23 +134,21 @@ impl ApplicationHandler for EngineApp {
                 }
             }
             WindowEvent::RedrawRequested => {
+                // ---> Calculate time:
+                let now = Instant::now();
+                let dt = (now - self.last_frame_time).as_secs_f32();
+                self.last_frame_time = now;
+                let total_time = self.start_time.elapsed().as_secs_f32();
+
+                // ---> Update logics (ECS systems):
+                rotate_cubes_system(&mut self.world, dt);
+                let (light_pos, light_color) = animate_light_system(&mut self.world, total_time);
+
                 if let Some(state) = &mut self.gfx_state {
-                    state.update(&self.input_state);
+                    // ---> Update camera:
+                    state.update(&self.input_state, dt);
 
-                    let elapsed_time = self.start_time.elapsed().as_secs_f32();
-
-                    // ---> Light System:
-                    let mut light_pos = glam::Vec3::ZERO;
-                    let mut light_color = glam::Vec3::ONE;
-
-                    for (transform, light) in self.world.query_mut::<(&mut Transform, &PointLight)>() {
-                        transform.position.x = elapsed_time.cos() * 10.0;
-                        transform.position.z = elapsed_time.sin() * 10.0;
-                        transform.position.y = 5.0 + (elapsed_time * 2.0).sin() * 2.0;
-
-                        light_pos = transform.position;
-                        light_color = light.color;
-                    }
+                    // ---> Prepare GPU data:
                     state.update_light(light_pos, light_color);
 
                     // ---> Group instances by material handle:
@@ -177,10 +159,10 @@ impl ApplicationHandler for EngineApp {
                         let instance = InstanceRaw {
                             model: transform.to_matrix().to_cols_array_2d(),
                         };
-
                         batches.entry(material.diffuse_texture).or_default().push(instance);
                     }
 
+                    // ---> Finally render to screen:
                     match state.render(&self.asset_manager, &batches) {
                         Ok(_) => {}
                         Err(wgpu::SurfaceError::Lost) => state.resize(state.size),
