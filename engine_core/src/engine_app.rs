@@ -174,7 +174,7 @@ impl ApplicationHandler for EngineApp {
 
                     // ---> Collect all transforms and make into matrices:
                     for (transform, material) in self.world.query_mut::<(&mut Transform, &Material)>() {
-                        transform.rotation *= Quat::from_rotation_y(0.001); // Spinning Cubes!!!
+                        //transform.rotation *= Quat::from_rotation_y(0.001); // Spinning Cubes!!!
                         let instance = InstanceRaw {
                             model: transform.to_matrix().to_cols_array_2d(),
                         };
