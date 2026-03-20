@@ -1,6 +1,6 @@
-use std::collections::HashMap;
-//===== IMPORTS =====//
+//***** IMPORTS ***********************************************************************************
 use std::sync::Arc;
+use std::collections::HashMap;
 
 use wgpu::util::DeviceExt;
 use winit::window::Window;
@@ -13,10 +13,10 @@ use crate::vertex::Vertex;
 use crate::camera::{Camera, CameraController, CameraUniform};
 use crate::texture;
 use crate::light::LightUniform;
-//===== IMPORTS =====//
+//***** IMPORTS ***********************************************************************************
 
 
-//===== GFX STATE STRUCTURE =====//
+//***** GFX STATE STRUCTURE ***********************************************************************
 pub struct GfxState {
     // Gfx base state:
     pub surface: wgpu::Surface<'static>,
@@ -89,7 +89,7 @@ impl GfxState {
         let depth_texture = texture::create_depth_texture(&device, &config, "Depth Texture");
 
         // ---> Create light:
-        let light_uniform = LightUniform::new([2.0, 10.0, 2.0], [1.0, 1.0, 1.0]);
+        let light_uniform = LightUniform::new([2.0, 10.0, 2.0], [1.0, 1.0, 1.0], 5.0);
 
         let light_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor{
             label: Some("Light Buffer"),
@@ -289,8 +289,8 @@ impl GfxState {
         self.queue.write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[self.camera_uniform]));
     }
 
-    pub fn update_light(&mut self, position: glam::Vec3, color: glam::Vec3) {
-        let light_uniform = LightUniform::new(position.into(), color.into());
+    pub fn update_light(&mut self, position: glam::Vec3, color: glam::Vec3, radius: f32) {
+        let light_uniform = LightUniform::new(position.into(), color.into(), radius);
         self.queue.write_buffer(&self.light_buffer, 0, bytemuck::cast_slice(&[light_uniform]));
     }
 
@@ -382,5 +382,5 @@ impl GfxState {
         Ok(())
     }
 }
-//===== GFX STATE STRUCTURE =====//
+//***** GFX STATE STRUCTURE ***********************************************************************
 

@@ -12,9 +12,10 @@ pub fn rotate_cubes_system(world: &mut World, dt: f32) {
 }
 
 /// A system that circles light around the scene based on abs time.
-pub fn animate_light_system(world: &mut World, total_time:  f32) -> (Vec3, Vec3) {
+pub fn animate_light_system(world: &mut World, total_time:  f32) -> (Vec3, Vec3, f32) {
     let mut light_pos = Vec3::ZERO;
     let mut light_color = Vec3::ONE;
+    let mut light_radius = 10.0;
 
     for (transform, light) in world.query_mut::<(&mut Transform, &PointLight)>() {
         transform.position.x = total_time.cos() * 10.0;
@@ -23,7 +24,8 @@ pub fn animate_light_system(world: &mut World, total_time:  f32) -> (Vec3, Vec3)
 
         light_pos = transform.position;
         light_color = light.color;
+        light_radius = light.radius;
     }
 
-    (light_pos, light_color)
+    (light_pos, light_color, light_radius)
 }

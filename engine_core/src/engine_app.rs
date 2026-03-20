@@ -1,20 +1,26 @@
+//***** IMPORTS ***********************************************************************************
 use std::{
     collections::HashMap, 
     sync::Arc,
     time::Instant,
 };
-
-//===== IMPORTS =====//
 use crate::{
     assets::{
         AssetManager, 
         TextureHandle,
     }, 
     components::{
-        InstanceRaw, Material, PointLight, Transform
+        InstanceRaw, 
+        Material, 
+        PointLight, 
+        Transform
     }, 
     gfx_state::GfxState, 
-    input::InputState, systems::{animate_light_system, rotate_cubes_system},
+    input::InputState, 
+    systems::{
+        animate_light_system, 
+        rotate_cubes_system,
+    },
 };
 use glam::{
     Vec3,
@@ -30,10 +36,10 @@ use winit::{
     }, 
     window::Window,
 };
-//===== IMPORTS =====//
+//***** IMPORTS ***********************************************************************************
 
 
-//===== ENGINE APP STRUCTURE =====//
+//***** ENGINE APP STRUCTURE **********************************************************************
 pub struct EngineApp {
     gfx_state: Option<GfxState>,
     input_state: InputState,
@@ -113,7 +119,7 @@ impl ApplicationHandler for EngineApp {
             // ---> Spawn a point-light:
             self.world.spawn((
                 Transform::new(glam::Vec3::new(0.0, 5.0, 0.0)),
-                PointLight::new(glam::Vec3::new(1.0, 1.0, 1.0)),
+                PointLight::new(glam::Vec3::new(1.0, 1.0, 1.0), 15.0),
             ));
 
             self.gfx_state = Some(state);
@@ -142,14 +148,14 @@ impl ApplicationHandler for EngineApp {
 
                 // ---> Update logics (ECS systems):
                 rotate_cubes_system(&mut self.world, dt);
-                let (light_pos, light_color) = animate_light_system(&mut self.world, total_time);
+                let (light_pos, light_color, light_radius) = animate_light_system(&mut self.world, total_time);
 
                 if let Some(state) = &mut self.gfx_state {
                     // ---> Update camera:
                     state.update(&self.input_state, dt);
 
                     // ---> Prepare GPU data:
-                    state.update_light(light_pos, light_color);
+                    state.update_light(light_pos, light_color, light_radius);
 
                     // ---> Group instances by material handle:
                     let mut batches: HashMap<TextureHandle, Vec<InstanceRaw>> = HashMap::new();
@@ -187,5 +193,5 @@ impl ApplicationHandler for EngineApp {
         }
     }
 }
-//===== ENGINE APP STRUCTURE =====//
+//***** ENGINE APP STRUCTURE **********************************************************************
 
