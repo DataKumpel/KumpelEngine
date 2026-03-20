@@ -4,7 +4,7 @@ use glam::{Mat4, Quat, Vec3};
 use crate::assets::TextureHandle;
 
 
-//===== TRANSFORM STRUCTURE =====//
+//***** TRANSFORM STRUCTURE ***********************************************************************
 pub struct Transform {
     pub position: Vec3,
     pub rotation: Quat,
@@ -24,10 +24,10 @@ impl Transform {
         Mat4::from_scale_rotation_translation(self.scale, self.rotation, self.position)
     }
 }
-//===== TRANSFORM STRUCTURE =====//
+//***** TRANSFORM STRUCTURE ***********************************************************************
 
 
-//===== INSTANCE RAW STRUCTURE =====//
+//***** INSTANCE RAW STRUCTURE ********************************************************************
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable)]
 pub struct InstanceRaw {
@@ -48,26 +48,27 @@ impl InstanceRaw {
         }
     }
 }
-//===== INSTANCE RAW STRUCTURE =====//
+//***** INSTANCE RAW STRUCTURE ********************************************************************
 
 
-//===== MATERIAL STRUCTURE =====//
+//***** MATERIAL STRUCTURE ************************************************************************
 pub struct Material {
     pub diffuse_texture: TextureHandle
 }
-//===== MATERIAL STRUCTURE =====//
+//***** MATERIAL STRUCTURE ************************************************************************
 
 
-//===== POINT LIGHT STRUCTURE =====//
+//***** POINT LIGHT STRUCTURE *********************************************************************
 pub struct PointLight {
     pub color: glam::Vec3,
+    pub radius: f32,
 }
 
 impl PointLight {
-    pub fn new(color: glam::Vec3) -> Self {
-        Self { color }
+    pub fn new(color: glam::Vec3, radius: f32) -> Self {
+        Self { color, radius }
     }
 }
-//===== POINT LIGHT STRUCTURE =====//
+//***** POINT LIGHT STRUCTURE *********************************************************************
 
 
