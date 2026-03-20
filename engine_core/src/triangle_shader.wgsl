@@ -1,26 +1,26 @@
-//===== UNIFORMS =====//
+//***** UNIFORMS **********************************************************************************
 struct CameraUniform {
     view_proj: mat4x4<f32>,
 }
 
 struct LightUniform {
-    position: vec4<f32>,
+    position: vec4<f32>, // xyz + radius
     color: vec4<f32>,
 }
-//===== UNFI0RMS =====//
+//***** UNIFORMS **********************************************************************************
 
 
-//===== BIND GROUPS =====//
+//***** BIND GROUPS *******************************************************************************
 @group(0) @binding(0) var<uniform> camera: CameraUniform;
 
 @group(1) @binding(0) var tex_diffuse: texture_2d<f32>;
 @group(1) @binding(1) var sampler_diffuse: sampler;
 
 @group(2) @binding(0) var<uniform> light: LightUniform;
-//===== BIND GROUPS =====//
+//***** BIND GROUPS *******************************************************************************
 
 
-//===== STRUCTURES =====//
+//***** STRUCTURES ********************************************************************************
 struct VertexInput {
     @location(0) position: vec3<f32>,
     @location(1) tex_coords: vec2<f32>,
@@ -40,7 +40,7 @@ struct VertexOutput {
     @location(1) world_normal: vec3<f32>,
     @location(2) world_position: vec3<f32>,
 }
-//===== STRUCTURES =====//
+//***** STRUCTURES ********************************************************************************
 
 
 @vertex
@@ -69,15 +69,25 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     // ---> Read texture color:
     let object_color = textureSample(tex_diffuse, sampler_diffuse, in.tex_coords);
 
+    // ---> Read light properties:
+    let light_pos = light.position.xyz;
+    let light_radius = light.position.w;
+
+    // ---> Calculate distance:
+    let light_distance = length(light_pos - in.world_position);
+
+    // ---> Smooth light attenuation:
+    let attenuation = smoothstep(light_radius, 0.0, light_distance);
+
     // ---> Ambient light:
-    let ambient_strength = 0.05;
+    let ambient_strength = 0.01;
     let ambient_color = light.color.xyz * ambient_strength;
 
     // ---> Diffuse light:
     let normal = normalize(in.world_normal);
     let light_dir = normalize(light.position.xyz - in.world_position);
     let diffuse_strength = max(dot(normal, light_dir), 0.0); // No negative light...
-    let diffuse_color = light.color.xyz * diffuse_strength;
+    let diffuse_color = light.color.xyz * attenuation * diffuse_strength;
 
     // ---> Combine to result:
     let result = (ambient_color + diffuse_color) * object_color.xyz;
