@@ -3,45 +3,7 @@ use wgpu::util::DeviceExt;
 use crate::vertex::Vertex;
 
 
-//===== HELLO WORLD TRIANGLE =====//
-//#[allow(dead_code)]
-//pub const TRIANGLE_VERTICES: &[Vertex] = &[
-//    Vertex { pos: [ 0.0,  0.5, 0.0], color: [1.0, 0.0, 0.0] },
-//    Vertex { pos: [-0.5, -0.5, 0.0], color: [0.0, 1.0, 0.0] },
-//    Vertex { pos: [ 0.5, -0.5, 0.0], color: [0.0, 0.0, 1.0] },
-//];
-//
-//#[allow(dead_code)]
-//pub const TRIANGLE_INDICES: &[u16] = &[0, 1, 2];
-//===== HELLO WORLD TRIANGLE =====//
-
-
-//===== HELLO WORLD CUBE =====//
-//#[allow(dead_code)]
-//pub const CUBE_VERTICES: &[Vertex] = &[
-//    Vertex { pos: [-0.5, -0.5,  0.5], color: [1.0, 0.0, 0.0] }, // 0
-//    Vertex { pos: [ 0.5, -0.5,  0.5], color: [0.0, 1.0, 0.0] }, // 1
-//    Vertex { pos: [ 0.5,  0.5,  0.5], color: [0.0, 0.0, 1.0] }, // 2
-//    Vertex { pos: [-0.5,  0.5,  0.5], color: [1.0, 1.0, 0.0] }, // 3
-//    Vertex { pos: [-0.5, -0.5, -0.5], color: [1.0, 0.0, 1.0] }, // 4
-//    Vertex { pos: [ 0.5, -0.5, -0.5], color: [0.0, 1.0, 1.0] }, // 5
-//    Vertex { pos: [ 0.5,  0.5, -0.5], color: [1.0, 1.0, 1.0] }, // 6
-//    Vertex { pos: [-0.5,  0.5, -0.5], color: [0.0, 0.0, 0.0] }, // 7
-//];
-//
-//#[allow(dead_code)]
-//pub const CUBE_INDICES: &[u16] = &[
-//    0, 1, 2, 2, 3, 0, // front
-//    1, 5, 6, 6, 2, 1, // right
-//    7, 6, 5, 5, 4, 7, // back
-//    4, 0, 3, 3, 7, 4, // left
-//    4, 5, 1, 1, 0, 4, // bottom
-//    3, 2, 6, 6, 7, 3, // top
-//];
-//===== HELLO WORLD CUBE =====//
-
-
-//===== TEXTURED CUBE =====//
+//***** TEXTURED CUBE *****************************************************************************
 pub const CUBE_VERTICES: &[Vertex] = &[
     // Front:
     Vertex { pos: [-0.5, -0.5,  0.5], tex_coords: [0.0, 1.0], normal: [ 0.0,  0.0,  1.0] }, // 0
@@ -88,10 +50,10 @@ pub const CUBE_INDICES: &[u16] = &[
     16, 17, 18, 18, 19, 16, // Top
     20, 21, 22, 22, 23, 20, // Bottom
 ];
-//===== TEXTURED CUBE =====//
+//***** TEXTURED CUBE *****************************************************************************
 
 
-//===== MESH STRUCTURE =====//
+//***** MESH STRUCTURE ****************************************************************************
 pub struct Mesh {
     pub vertex_buffer: wgpu::Buffer,
     pub index_buffer: wgpu::Buffer,
@@ -114,5 +76,60 @@ impl Mesh {
 
         Self { vertex_buffer, index_buffer, num_indices: indices.len() as u32 }
     }
+
+    pub fn from_obj(device: &wgpu::Device, path: &str) -> Result<Self, tobj::LoadError> {
+        // ---> Load OBJ file:
+        let load_options = tobj::LoadOptions { 
+            single_index: true, 
+            triangulate: true, 
+            ignore_points: true, 
+            ignore_lines: true, 
+        };
+        let (models, _materials) = tobj::load_obj(path, &load_options)?;
+
+        let mesh = &models[0].mesh;
+
+        // ---> Interleaving (build vertex data):
+        let mut vertices = Vec::new();
+        let num_vertices = mesh.positions.len() / 3; // flat array of [x, y, z, x, y, z, ...]
+
+        for i in 0..num_vertices {
+            // ---> Positions:
+            let pos = [
+                mesh.positions[i * 3],
+                mesh.positions[i * 3 + 1],
+                mesh.positions[i * 3 + 2],
+            ];
+            
+            // ---> UV coordinates:
+            let tex_coords = if !mesh.texcoords.is_empty() {
+                [
+                    mesh.texcoords[i * 2],
+                    1.0 - mesh.texcoords[i * 2 + 1],  // Invert V because tobj uses top-left coordinates,
+                                                      // but WGPU uses bottom-left coordinates...
+                ]
+            } else {
+                [0.0, 0.0]
+            };
+
+            // ---> Normals:
+            let normal = if !mesh.normals.is_empty() {
+                [
+                    mesh.normals[i * 3],
+                    mesh.normals[i * 3 + 1],
+                    mesh.normals[i * 3 + 2],
+                ]
+            } else {
+                [0.0, 1.0, 0.0] // Fallback...
+            };
+
+            vertices.push(Vertex { pos, tex_coords, normal });
+        }
+
+        // ---> Extract index data:
+        let indices: Vec<u16> = mesh.indices.iter().map(|&index| index as u16).collect();
+
+        Ok(Self::new(device, &vertices, &indices))
+    }
 }
-//===== MESH STRUCTURE =====//
+//***** MESH STRUCTURE ****************************************************************************

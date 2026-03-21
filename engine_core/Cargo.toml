@@ -13,4 +13,5 @@ bytemuck = { version = "1.25.0", features = ["derive"] }
 glam = "0.32.1"
 hecs = "0.11.0"
 image = "0.25.10"
+tobj = "4.0.3"
 
