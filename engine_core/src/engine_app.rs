@@ -6,22 +6,13 @@ use std::{
 };
 use crate::{
     assets::{
-        AssetManager, 
-        TextureHandle,
-    }, 
-    components::{
-        InstanceRaw, 
-        Material, 
-        PointLight, 
-        Transform
-    }, 
-    gfx_state::GfxState, 
-    input::InputState, 
-    systems::{
+        AssetManager, MeshHandle, TextureHandle
+    }, components::{
+        InstanceRaw, Material, MeshComponent, PointLight, Transform
+    }, gfx_state::GfxState, input::InputState, mesh::Mesh, systems::{
         animate_light_system, 
         rotate_cubes_system,
-    },
-    texture::DiffuseTexture,
+    }, texture::DiffuseTexture
 };
 use glam::{
     Vec3,
@@ -94,25 +85,20 @@ impl ApplicationHandler for EngineApp {
             let state = pollster::block_on(GfxState::new(window));
 
             // ---> Load Texture via Asset Manager:
-            let handle = self.load_texture(&state, "sample_texture.png", "test_texture");
-            let handle2 = self.load_texture(&state, "sample_texture2.png", "test_texture2");
+            let tex_handle = self.load_texture(&state, "sample_texture.png", "test_texture");
+            let _tex_handle2 = self.load_texture(&state, "sample_texture2.png", "test_texture2");
 
-            // ---> Spawn 100 cubes in a 10x10 grid:
-            for x in 0..10 {
-                for z in 0..10 {
-                    let position = Vec3::new(x as f32 * 2.0 - 10.0, 0.0, z as f32 * 2.0 -10.0);
-                    self.world.spawn((
-                        Transform::new(position),
-                        Material { 
-                            diffuse_texture: if (x * 10 + z) % 2 == 0 {
-                                handle
-                            } else {
-                                handle2
-                            }
-                        }
-                    ));
-                }
-            }
+            // ---> Load Mesh via Asset Manager:
+            let mesh_handle = self.asset_manager.add_mesh(
+                Mesh::from_obj(&state.device, "assets/models/fortress.obj").unwrap()
+            );
+
+            // ---> Spawn castle:
+            self.world.spawn((
+                Transform::new(glam::Vec3::new(0.0, -2.0, -5.0)),
+                MeshComponent { handle: mesh_handle },
+                Material { diffuse_texture: tex_handle }
+            ));
 
             // ---> Spawn a point-light:
             self.world.spawn((
@@ -145,7 +131,7 @@ impl ApplicationHandler for EngineApp {
                 let total_time = self.start_time.elapsed().as_secs_f32();
 
                 // ---> Update logics (ECS systems):
-                rotate_cubes_system(&mut self.world, dt);
+                //rotate_cubes_system(&mut self.world, dt);
                 let (light_pos, light_color, light_radius) = animate_light_system(&mut self.world, total_time);
 
                 if let Some(state) = &mut self.gfx_state {
@@ -155,15 +141,15 @@ impl ApplicationHandler for EngineApp {
                     // ---> Prepare GPU data:
                     state.update_light(light_pos, light_color, light_radius);
 
-                    // ---> Group instances by material handle:
-                    let mut batches: HashMap<TextureHandle, Vec<InstanceRaw>> = HashMap::new();
+                    // ---> Group instances by mesh and material handle:
+                    let mut batches: HashMap<(MeshHandle, TextureHandle), Vec<InstanceRaw>> = HashMap::new();
 
                     // ---> Collect all transforms and make into matrices:
-                    for (transform, material) in self.world.query_mut::<(&mut Transform, &Material)>() {
+                    for (transform, mesh_comp, material) in self.world.query_mut::<(&Transform, &MeshComponent, &Material)>() {
                         let instance = InstanceRaw {
                             model: transform.to_matrix().to_cols_array_2d(),
                         };
-                        batches.entry(material.diffuse_texture).or_default().push(instance);
+                        batches.entry((mesh_comp.handle, material.diffuse_texture)).or_default().push(instance);
                     }
 
                     // ---> Finally render to screen:

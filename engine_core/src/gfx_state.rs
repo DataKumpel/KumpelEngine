@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use wgpu::util::DeviceExt;
 use winit::window::Window;
 
-use crate::assets::{AssetManager, TextureHandle};
+use crate::assets::{AssetManager, MeshHandle, TextureHandle};
 use crate::components::InstanceRaw;
 use crate::input::InputState;
 use crate::mesh::{self, Mesh};
@@ -308,7 +308,7 @@ impl GfxState {
     pub fn render(
         &mut self, 
         asset_manager: &AssetManager, 
-        batches: &HashMap<TextureHandle, Vec<InstanceRaw>>,
+        batches: &HashMap<(MeshHandle, TextureHandle), Vec<InstanceRaw>>,
     ) -> Result<(), wgpu::SurfaceError> {
         
         let output = self.surface.get_current_texture()?;
@@ -318,11 +318,11 @@ impl GfxState {
         let mut all_instances = Vec::new();
         let mut render_commands = Vec::new();
 
-        for (handle, instances) in batches {
+        for ((mesh_handle, tex_handle), instances) in batches {
             let start_idx = all_instances.len() as u32;
             all_instances.extend_from_slice(instances);
             let end_idx = all_instances.len() as u32;
-            render_commands.push((*handle, start_idx..end_idx));
+            render_commands.push((*mesh_handle, *tex_handle, start_idx..end_idx));
         }
 
         self.queue.write_buffer(&self.instance_buffer, 0, bytemuck::cast_slice(&all_instances));
@@ -364,15 +364,23 @@ impl GfxState {
             render_pass.set_bind_group(2, &self.light_bind_group, &[]);
 
             // ---> Bind Buffers:
-            render_pass.set_vertex_buffer(0, self.cube_mesh.vertex_buffer.slice(..));
             render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
-            render_pass.set_index_buffer(self.cube_mesh.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
 
             // ---> Draw batched objects:
-            for (handle, instance_range) in render_commands {
-                if let Some(texture) = asset_manager.get_texture(handle) {
+            for (mesh_handle, tex_handle, instance_range) in render_commands {
+                if let (Some(mesh), Some(texture)) = (
+                    asset_manager.get_mesh(mesh_handle), 
+                    asset_manager.get_texture(tex_handle),
+                ) {
+                    // ---> Bind specific mesh (slot 0):
+                    render_pass.set_vertex_buffer(0, mesh.vertex_buffer.slice(..));
+                    render_pass.set_index_buffer(mesh.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+
+                    // ---> Bind specific texture (slot 1):
                     render_pass.set_bind_group(1, &texture.bind_group, &[]);
-                    render_pass.draw_indexed(0..self.cube_mesh.num_indices, 0, instance_range);
+
+                    // ---> DRAW!!!
+                    render_pass.draw_indexed(0..mesh.num_indices, 0, instance_range);
                 }
             }
         } // End of Render Pass

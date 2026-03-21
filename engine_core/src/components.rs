@@ -1,7 +1,7 @@
 use bytemuck::{Pod, Zeroable};
 use glam::{Mat4, Quat, Vec3};
 
-use crate::assets::TextureHandle;
+use crate::assets::{MeshHandle, TextureHandle};
 
 
 //***** TRANSFORM STRUCTURE ***********************************************************************
@@ -56,6 +56,13 @@ pub struct Material {
     pub diffuse_texture: TextureHandle
 }
 //***** MATERIAL STRUCTURE ************************************************************************
+
+
+//***** MESH COMPONENT STRUCTURE ******************************************************************
+pub struct MeshComponent {
+    pub handle: MeshHandle
+}
+//***** MESH COMPONENT STRUCTURE ******************************************************************
 
 
 //***** POINT LIGHT STRUCTURE *********************************************************************
