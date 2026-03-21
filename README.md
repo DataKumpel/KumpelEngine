@@ -15,10 +15,10 @@ I plan to implement the engine along the following roadmap:
 
 - [x] Windowing using `winit`
 - [x] Input management using `winit`
-- [ ] Implement the game loop
-  - [ ] Consume events (mouse, keyboard, window events)
-  - [ ] Update game logic with delta time (`dt`)
-  - [ ] Render the current game state to screen
+- [x] Implement the game loop
+  - [x] Consume events (mouse, keyboard, window events)
+  - [x] Update game logic with delta time (`dt`)
+  - [x] Render the current game state to screen
 
 ### Renderer (WebGPU)
 
@@ -35,7 +35,7 @@ I plan to implement the engine along the following roadmap:
 
 - [x] Implement an Entity Component System (ECS) with simple IDs
 - [x] Components like raw data without logic (e.g. position, velocity, mesh)
-- [ ] Systems with only logic (e.g. movement system)
+- [x] Systems with only logic (e.g. movement system)
 
 ### Asset Management
 
@@ -55,8 +55,9 @@ I plan to implement the engine along the following roadmap:
 Before I implement complex physics or editor controls, I need stable time measurements.
 Currently updates are pumped out as fast as the computer can go.
 
-- [ ] Delta Time (dt): Timespan between two frames. Updates should be decoupled from monitor-framerate.
-- [ ] ECS refactoring: Currently everything is done in winits `RedrawRequested`-Event. Implement clean functions like `system_update_camera(world, dt)` and `system_update_lights(world, dt)`. Call them before drawing.
+- [x] Delta Time (dt): Timespan between two frames. Updates should be decoupled from monitor-framerate.
+- [x] ECS refactoring: Currently everything is done in winits `RedrawRequested`-Event. Implement clean functions like `system_update_camera(world, dt)` and `system_update_lights(world, dt)`. Call them before drawing.
+- [x] Implement point light range
 
 ### Milestone 2: Loading 3D models
 
