@@ -21,6 +21,7 @@ use crate::{
         animate_light_system, 
         rotate_cubes_system,
     },
+    texture::DiffuseTexture,
 };
 use glam::{
     Vec3,
@@ -63,6 +64,18 @@ impl EngineApp {
         }
     }
 
+    pub fn load_texture(&mut self, state: &GfxState, texture_filename: &str, label: &str) -> TextureHandle {
+        let texture = DiffuseTexture::from_assets(
+            &state.device, 
+            &state.queue, 
+            texture_filename, 
+            label, 
+            &state.texture_bind_group_layout,
+        ).expect(format!("Couldn't load texture {texture_filename:?} from assets!").as_str());
+        
+        self.asset_manager.add_texture(texture)
+    }
+
     pub fn run(mut self) {
         env_logger::init();
         let event_loop = EventLoop::new().expect("Couldn't create event loop");
@@ -81,23 +94,8 @@ impl ApplicationHandler for EngineApp {
             let state = pollster::block_on(GfxState::new(window));
 
             // ---> Load Texture via Asset Manager:
-            let texture = crate::texture::DiffuseTexture::from_path(
-                &state.device, 
-                &state.queue, 
-                "./sample_texture.png", 
-                "test_texture", 
-                &state.texture_bind_group_layout,
-            ).expect("Couldn't load texture from disk!");
-            let handle = self.asset_manager.add_texture(texture);
-
-            let texture2 = crate::texture::DiffuseTexture::from_path(
-                &state.device, 
-                &state.queue, 
-                "./sample_texture2.png", 
-                "test_texture", 
-                &state.texture_bind_group_layout,
-            ).expect("Couldn't load texture from disk!");
-            let handle2 = self.asset_manager.add_texture(texture2);
+            let handle = self.load_texture(&state, "sample_texture.png", "test_texture");
+            let handle2 = self.load_texture(&state, "sample_texture2.png", "test_texture2");
 
             // ---> Spawn 100 cubes in a 10x10 grid:
             for x in 0..10 {

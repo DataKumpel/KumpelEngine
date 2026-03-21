@@ -4,7 +4,7 @@ use image::{DynamicImage, GenericImageView};
 pub const DEPTH_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Depth32Float;
 
 
-//===== DEPTH TEXTURE =====//
+//***** DEPTH TEXTURE *****************************************************************************
 pub fn create_depth_texture(
     device: &wgpu::Device, 
     config: &wgpu::SurfaceConfiguration, 
@@ -30,10 +30,10 @@ pub fn create_depth_texture(
     let texture = device.create_texture(&desc);
     texture.create_view(&wgpu::TextureViewDescriptor::default())
 }
-//===== DEPTH TEXTURE =====//
+//***** DEPTH TEXTURE *****************************************************************************
 
 
-//===== DIFFUSE TEXTURE STRUCTURE =====//
+//***** DIFFUSE TEXTURE STRUCTURE *****************************************************************
 pub struct DiffuseTexture {
     pub texture: wgpu::Texture,
     pub view: wgpu::TextureView,
@@ -42,6 +42,17 @@ pub struct DiffuseTexture {
 }
 
 impl DiffuseTexture {
+    pub fn from_assets(
+        device: &wgpu::Device, 
+        queue: &wgpu::Queue, 
+        texture_filename: &str,
+        label: &str,
+        layout: &wgpu::BindGroupLayout,
+    ) -> Result<Self, image::ImageError> {
+        let asset_path = format!("./assets/textures/{texture_filename}");
+        Ok(Self::from_path(device, queue, &asset_path, label, layout)?)
+    }
+
     pub fn from_path(
         device: &wgpu::Device, 
         queue: &wgpu::Queue, 
@@ -142,4 +153,4 @@ impl DiffuseTexture {
 
     }
 }
-//===== DIFFUSE TEXTURE STRUCTURE =====//
+//***** DIFFUSE TEXTURE STRUCTURE *****************************************************************
