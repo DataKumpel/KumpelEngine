@@ -77,6 +77,11 @@ impl Mesh {
         Self { vertex_buffer, index_buffer, num_indices: indices.len() as u32 }
     }
 
+    pub fn from_assets(device: &wgpu::Device, mesh_filename: &str) -> Result<Self, tobj::LoadError> {
+        let filepath = format!("assets/models/{mesh_filename}");
+        Self::from_obj(device, filepath.as_str())
+    }
+
     pub fn from_obj(device: &wgpu::Device, path: &str) -> Result<Self, tobj::LoadError> {
         // ---> Load OBJ file:
         let load_options = tobj::LoadOptions { 

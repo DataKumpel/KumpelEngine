@@ -11,7 +11,7 @@ use crate::{
         InstanceRaw, Material, MeshComponent, PointLight, Transform
     }, gfx_state::GfxState, input::InputState, mesh::Mesh, systems::{
         animate_light_system, 
-        rotate_cubes_system,
+        // rotate_cubes_system,
     }, texture::DiffuseTexture
 };
 use glam::{
@@ -67,6 +67,13 @@ impl EngineApp {
         self.asset_manager.add_texture(texture)
     }
 
+    pub fn load_model(&mut self, state: &GfxState, model_filename: &str) -> MeshHandle {
+        let mesh = Mesh::from_assets(&state.device, model_filename)
+            .expect(format!("Couldn't load model {model_filename:?} from assets!").as_str());
+        
+        self.asset_manager.add_mesh(mesh)
+    }
+
     pub fn run(mut self) {
         env_logger::init();
         let event_loop = EventLoop::new().expect("Couldn't create event loop");
@@ -89,21 +96,19 @@ impl ApplicationHandler for EngineApp {
             let _tex_handle2 = self.load_texture(&state, "sample_texture2.png", "test_texture2");
 
             // ---> Load Mesh via Asset Manager:
-            let mesh_handle = self.asset_manager.add_mesh(
-                Mesh::from_obj(&state.device, "assets/models/fortress.obj").unwrap()
-            );
+            let mesh_handle = self.load_model(&state, "fortess.obj");
 
             // ---> Spawn castle:
             self.world.spawn((
-                Transform::new(glam::Vec3::new(0.0, -2.0, -5.0)),
+                Transform::new(Vec3::new(0.0, -2.0, -5.0)),
                 MeshComponent { handle: mesh_handle },
                 Material { diffuse_texture: tex_handle }
             ));
 
             // ---> Spawn a point-light:
             self.world.spawn((
-                Transform::new(glam::Vec3::new(0.0, 5.0, 0.0)),
-                PointLight::new(glam::Vec3::new(1.0, 1.0, 1.0), 15.0),
+                Transform::new(Vec3::new(0.0, 5.0, 0.0)),
+                PointLight::new(Vec3::new(1.0, 1.0, 1.0), 25.0),
             ));
 
             self.gfx_state = Some(state);
